@@ -1,0 +1,434 @@
+<%- include('../components/template') %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.js"></script>
+
+<%
+  // Calculate formattedFile safely
+  let formattedFile = req.params.file || '';
+  let filePath = req.query.path ? `/${req.query.path}` : '';
+  let fullPath = `/app/data${filePath}/${formattedFile}`.replace(/\/+/g, '/');
+%>
+
+<main id="content" class="pb-8">
+  <!-- Header Section - Improved for mobile -->
+  <div class="bg-gradient-to-r from-neutral-900/50 to-transparent border-b border-white/5">
+    <div class="px-4 py-3 sm:px-6">
+      <div class="flex flex-col">
+        <div class="flex items-center justify-between">
+          <h1 class="text-lg sm:text-xl font-semibold leading-7 text-white truncate max-w-[70%]">File Editor</h1>
+          <div class="sm:hidden">
+            <a href="/instance/<%= req.params.id %>/files<%= req.query.path ? `?path=${req.query.path}` : '' %>" class="inline-flex items-center rounded-lg bg-white/5 p-2 text-neutral-300 hover:bg-white/10 transition-colors border border-white/5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="mt-1 flex items-center text-xs sm:text-sm text-neutral-400 truncate">
+          <span class="truncate" title="<%= fullPath %>">
+            Editing: <%= fullPath %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instance Info Section -->
+  <%- include('../components/instance') %>
+
+  <!-- Breadcrumb Navigation - Improved for mobile -->
+  <nav class="px-4 sm:px-6 pt-4" aria-label="Breadcrumb">
+    <ol class="flex items-center flex-wrap gap-y-1">
+      <li>
+        <a href="/instance/<%= req.params.id %>/files" class="text-neutral-400 hover:text-neutral-300 transition text-xs sm:text-sm">Instances</a>
+      </li>
+      <li class="text-neutral-500 px-1 sm:px-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </li>
+      <li>
+        <a href="/instance/<%= req.params.id %>/files" class="text-neutral-400 hover:text-neutral-300 transition text-xs sm:text-sm">Files</a>
+      </li>
+      <li class="text-neutral-500 px-1 sm:px-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </li>
+      <li class="truncate max-w-[120px] sm:max-w-none">
+        <a href="/instance/<%= req.params.id %>/files<%= req.query.path ? `?path=${req.query.path}` : '' %>" class="text-neutral-400 hover:text-neutral-300 transition text-xs sm:text-sm truncate">/app/data<%= filePath %></a>
+      </li>
+      <li class="text-neutral-500 px-1 sm:px-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </li>
+      <li class="text-neutral-300 truncate max-w-[100px] sm:max-w-xs text-xs sm:text-sm" title="<%= formattedFile %>">
+        <%= formattedFile %>
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Action Buttons - Improved mobile layout -->
+  <div class="px-4 sm:px-6 pt-3">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex-1 sm:hidden">
+        <button id="saveButtonMobile" onclick="saveFile()" class="w-full inline-flex items-center justify-center rounded-lg <%= theme['button-color'] %> px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Save Changes
+        </button>
+      </div>
+      <div class="hidden sm:block"></div> <!-- Spacer for desktop -->
+      <div class="flex gap-2 sm:gap-3">
+        <div class="hidden sm:block">
+          <a href="/instance/<%= req.params.id %>/files<%= req.query.path ? `?path=${req.query.path}` : '' %>" class="inline-flex items-center rounded-lg bg-white/5 px-3 sm:px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 transition-colors border border-white/5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span class="hidden sm:inline">Back to Files</span>
+          </a>
+        </div>
+        <div class="hidden sm:block">
+          <button id="saveButton" onclick="saveFile()" class="inline-flex items-center rounded-lg <%= theme['button-color'] %> px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor Section - Improved mobile sizing -->
+  <div class="px-4 sm:px-6 pt-3">
+    <div class="rounded-lg sm:rounded-xl overflow-hidden border border-white/5 bg-neutral-900/50 shadow">
+      <div class="h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)] min-h-[300px]" id="editor"></div>
+    </div>
+  </div>
+
+  <!-- Status Bar - Improved mobile layout -->
+  <div class="px-4 sm:px-6 pt-3">
+    <div class="flex items-center justify-between text-xs text-neutral-500">
+      <div class="flex items-center gap-2 sm:gap-4">
+        <%
+          const fileExtension = formattedFile.split('.').pop();
+          const language = fileExtension === 'js' ? 'javascript'
+                           : fileExtension === 'json' ? 'json'
+                           : fileExtension === 'html' ? 'html'
+                           : fileExtension === 'css' ? 'css'
+                           : fileExtension === 'ts' ? 'typescript'
+                           : fileExtension === 'md' ? 'markdown'
+                           : fileExtension === 'txt' ? 'plaintext'
+                           : fileExtension === 'py' ? 'python'
+                           : fileExtension === 'sh' ? 'shell'
+                           : fileExtension === 'go' ? 'go'
+                           : fileExtension === 'php' ? 'php'
+                           : fileExtension === 'sql' ? 'sql'
+                           : fileExtension === 'c' ? 'c'
+                           : fileExtension === 'cpp' ? 'cpp'
+                           : fileExtension === 'java' ? 'java'
+                           : fileExtension === 'rb' ? 'ruby'
+                           : fileExtension === 'pl' ? 'perl'
+                           : fileExtension === 'yml' ? 'yaml'
+                           : fileExtension === 'xml' ? 'xml'
+                           : 'plaintext';
+        %>
+        <span id="languageDisplay" class="px-2 py-1 rounded bg-white/5 text-neutral-300 text-xs sm:text-sm">
+          <%= language.toUpperCase() %>
+        </span>
+        <span id="lineCount" class="text-xs sm:text-sm">0 lines</span>
+      </div>
+      <div id="saveStatus" class="text-xs sm:text-sm text-neutral-400">Ready</div>
+    </div>
+  </div>
+
+  <!-- Toast Notification (hidden by default) - Improved for mobile -->
+  <div id="toast" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm hidden z-50">
+    <div class="rounded-lg bg-green-600/90 px-4 py-3 text-sm text-white shadow-lg">
+      <div class="flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="toastMessage" class="truncate">Changes saved successfully!</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../components/footer') %>
+
+<script>
+// Initialize Monaco Editor with better mobile support
+require.config({ 
+  paths: { 
+    'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs',
+    'vs/css': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs'
+  }
+});
+
+require(['vs/editor/editor.main'], function() {
+  // Get theme from localStorage or use default
+  const storedTheme = localStorage.getItem('editorTheme') || 'vs-dark';
+  
+  // Create editor instance with mobile-optimized settings
+  const editor = monaco.editor.create(document.getElementById('editor'), {
+    value: <%- JSON.stringify(file) %>,
+    language: '<%= language %>',
+    theme: storedTheme,
+    automaticLayout: true,
+    minimap: {
+      enabled: window.innerWidth >= 640 // Disable minimap on mobile
+    },
+    scrollBeyondLastLine: false,
+    fontSize: window.innerWidth < 640 ? 13 : 14, // Slightly smaller font on mobile
+    lineNumbers: 'on',
+    roundedSelection: true,
+    scrollbar: {
+      verticalSliderSize: 6,
+      horizontalSliderSize: 6,
+      useShadows: false
+    },
+    renderWhitespace: 'selection',
+    quickSuggestions: window.innerWidth >= 640, // Disable quick suggestions on mobile
+    bracketPairColorization: {
+      enabled: true
+    },
+    wordWrap: window.innerWidth < 640 ? 'on' : 'off' // Word wrap on mobile
+  });
+
+  // Handle window resize
+  let resizeTimeout;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      // Update editor settings based on new window size
+      editor.updateOptions({
+        minimap: { enabled: window.innerWidth >= 640 },
+        fontSize: window.innerWidth < 640 ? 13 : 14,
+        quickSuggestions: window.innerWidth >= 640,
+        wordWrap: window.innerWidth < 640 ? 'on' : 'off'
+      });
+    }, 200);
+  });
+
+  // Update line count
+  function updateLineCount() {
+    const lineCount = editor.getModel().getLineCount();
+    document.getElementById('lineCount').textContent = `${lineCount} line${lineCount !== 1 ? 's' : ''}`;
+  }
+
+  // Initial line count update
+  updateLineCount();
+  
+  // Listen for content changes
+  editor.getModel().onDidChangeContent(() => {
+    updateLineCount();
+    document.getElementById('saveStatus').textContent = 'Unsaved changes';
+    document.getElementById('saveStatus').className = 'text-xs sm:text-sm text-yellow-400';
+  });
+
+  // Save editor instance to window
+  window.editor = editor;
+
+  // Handle Ctrl+S/Cmd+S for saving
+  window.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      saveFile();
+    }
+  });
+});
+
+// Improved save file function with better mobile support
+async function saveFile() {
+  const button = document.getElementById('saveButton');
+  const mobileButton = document.getElementById('saveButtonMobile');
+  const statusElement = document.getElementById('saveStatus');
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toastMessage');
+  
+  // Disable buttons and show working state
+  if (button) button.disabled = true;
+  if (mobileButton) mobileButton.disabled = true;
+  
+  const savingContent = `
+    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    Saving...
+  `;
+  
+  if (button) button.innerHTML = savingContent;
+  if (mobileButton) mobileButton.innerHTML = savingContent;
+  
+  statusElement.textContent = 'Saving...';
+  statusElement.className = 'text-xs sm:text-sm text-blue-400';
+
+  try {
+    const fileContent = window.editor.getValue();
+    const filename = '<%= req.params.file %>';
+    const instanceId = '<%= req.params.id %>';
+    const query = '<%= req.query.path ? `?path=${req.query.path}` : "" %>';
+
+    const response = await fetch(`/instance/${instanceId}/files/edit/${filename}${query}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: fileContent
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data && data.message) {
+      // Show success state
+      const savedContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Saved
+      `;
+      if (button) button.innerHTML = savedContent;
+      if (mobileButton) mobileButton.innerHTML = 'Saved';
+      
+      statusElement.textContent = 'Saved';
+      statusElement.className = 'text-xs sm:text-sm text-green-400';
+      
+      // Show toast notification
+      toastMessage.textContent = data.message || 'Changes saved successfully!';
+      toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm z-50 animate-fade-in';
+      setTimeout(() => {
+        toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm z-50 animate-fade-out';
+        setTimeout(() => {
+          toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm hidden z-50';
+        }, 300);
+      }, 3000);
+      
+      // Reset buttons after delay
+      setTimeout(() => {
+        const saveButtonContent = `
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Save Changes
+        `;
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = saveButtonContent;
+        }
+        if (mobileButton) {
+          mobileButton.disabled = false;
+          mobileButton.innerHTML = 'Save Changes';
+        }
+      }, 1500);
+    } else {
+      throw new Error('Invalid response from server');
+    }
+  } catch (error) {
+    console.error('Error saving file:', error);
+    
+    // Show error state
+    const errorContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Error
+    `;
+    if (button) button.innerHTML = errorContent;
+    if (mobileButton) mobileButton.innerHTML = 'Error';
+    
+    statusElement.textContent = 'Error saving file';
+    statusElement.className = 'text-xs sm:text-sm text-red-400';
+    
+    // Show error toast
+    toastMessage.textContent = 'Failed to save file. Please try again.';
+    toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm bg-red-600/90 z-50 animate-fade-in';
+    setTimeout(() => {
+      toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm bg-red-600/90 z-50 animate-fade-out';
+      setTimeout(() => {
+        toast.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 max-w-xs mx-auto sm:max-w-sm hidden z-50';
+      }, 300);
+    }, 3000);
+    
+    // Reset buttons after delay
+    setTimeout(() => {
+      const saveButtonContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Save Changes
+      `;
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = saveButtonContent;
+      }
+      if (mobileButton) {
+        mobileButton.disabled = false;
+        mobileButton.innerHTML = 'Save Changes';
+      }
+    }, 1500);
+  }
+}
+</script>
+
+<style>
+/* Custom animations for toast notifications */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(10px); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease-in forwards;
+}
+
+/* Monaco Editor custom scrollbar */
+.monaco-scrollable-element > .scrollbar > .slider {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.monaco-scrollable-element > .scrollbar > .slider:hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Better mobile behavior */
+@media (max-width: 640px) {
+  /* Adjust editor padding and margins */
+  .monaco-editor, .monaco-editor .margin {
+    padding-left: 4px !important;
+  }
+  
+  /* Hide some editor decorations on mobile */
+  .monaco-editor .line-numbers {
+    font-size: 12px !important;
+  }
+  
+  /* Improve touch targets */
+  .monaco-editor .monaco-mouse-cursor-text {
+    padding: 4px 0;
+  }
+}
+
+/* Prevent layout shift when scrollbars appear */
+.monaco-scrollable-element {
+  scrollbar-gutter: stable;
+}
+</style>

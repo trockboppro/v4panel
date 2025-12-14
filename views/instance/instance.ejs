@@ -1,0 +1,1005 @@
+<%- include('../components/template') %>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"
+    integrity="sha512-2PRgAav8Os8vLcOAh1gSaDoNLe1fAyq8/G3QSdyjFFD+OqNjLeHE/8q4+S4MEZgPsuo+itHopj+hJvqS8XUQ8A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css"
+    integrity="sha512-iLYuqv+v/P4u9erpk+KM83Ioe/l7SEmr7wB6g+Kg1qmEit8EShDKnKtLHlv2QXUp7GGJhmqDI+1PhJYLTsfb8w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/attach/attach.min.js"
+    integrity="sha512-43J76SR5UijcuJTzs73z8NpkyWon8a8EoV+dX6obqXW7O26Yb268H2vP6EiJjD7sWXqxS3G/YOqPyyLF9fmqgA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/fit/fit.min.js"
+    integrity="sha512-+wh8VA1djpWk3Dj9/IJDu6Ufi4vVQ0zxLv9Vmfo70AbmYFJm0z3NLnV98vdRKBdPDV4Kwpi7EZdr8mDY9L8JIA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<style>
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .xterm-viewport {
+        overflow-y: hidden !important;
+        border-radius: 0 0 0.75rem 0.75rem;
+    }
+
+    .xterm-screen {
+        padding: 0.5rem;
+    }
+
+    .copy-btn {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .copy-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .copy-btn:active {
+        transform: scale(0.95);
+    }
+
+    .progress-container {
+        width: 100%;
+        height: 8px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-text {
+        font-size: 0.875rem;
+        margin-top: 4px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .usage-details {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2px;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .server-address-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+        border: 1px solid rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+    
+    .server-address-card:hover {
+        border-color: rgba(255,255,255,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .address-display {
+        font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        letter-spacing: 0.5px;
+        background: rgba(0,0,0,0.2);
+        padding: 8px 12px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        word-break: break-all;
+    }
+    
+    .copy-indicator {
+        opacity: 0;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    
+    .copy-indicator.active {
+        opacity: 1;
+    }
+    
+    .tooltip {
+        position: relative;
+    }
+    
+    .tooltip-text {
+        visibility: hidden;
+        width: 120px;
+        background-color: rgba(0,0,0,0.8);
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 12px;
+    }
+    
+    .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    /* Improved terminal styling */
+    #terminal {
+        min-height: 300px;
+        max-height: 500px;
+        overflow: hidden;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 0 0 0.75rem 0.75rem;
+    }
+    
+    /* Better input field styling */
+    #input {
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-top: none;
+    }
+    
+    #input:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    
+    /* Power buttons container */
+    .power-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    /* Improved EULA modal */
+    .eula-modal {
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .eula-content {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding-right: 1rem;
+    }
+
+    .eula-content::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .eula-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .eula-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+    }
+
+    /* Terminal container improvements */
+    .terminal-container {
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .terminal-header {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+    }
+
+    .terminal-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Status indicator */
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        display: inline-block;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .power-buttons {
+            flex-direction: column;
+        }
+        
+        .server-address-card {
+            margin-top: 1rem;
+        }
+        
+        #terminal {
+            min-height: 250px;
+            max-height: 350px;
+        }
+    }
+</style>
+<main class="overflow-hidden" id="content">
+    <% if (Array.isArray(files) && files.length > 0 && !files.some(file => file.name === 'eula.txt')) { %>
+        <% if (instance.imageData.features && instance.imageData.features.includes('eula')) { %>
+            <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm z-50 p-4">
+                <div class="eula-modal max-w-2xl w-full rounded-xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold text-white">Minecraft End User License Agreement (EULA)</h2>
+                    </div>
+                    
+                    <div class="eula-content text-sm text-gray-300 mb-6">
+                        <p class="mb-4">Before you can start your Minecraft server, you must agree to Mojang's End User License Agreement (EULA).</p>
+                        
+                        <h3 class="font-semibold text-white mb-2">Key Points:</h3>
+                        <ul class="list-disc pl-5 mb-4 space-y-1">
+                            <li>You must be at least 13 years old to agree to the EULA</li>
+                            <li>You agree not to distribute Minecraft or server software</li>
+                            <li>You agree not to use mods that alter gameplay in unauthorized ways</li>
+                            <li>Commercial use is restricted without permission</li>
+                        </ul>
+                        
+                        <p class="mb-4">By clicking "I Agree", you acknowledge that you have read, understood, and agree to be bound by the <a href="https://account.mojang.com/documents/minecraft_eula" target="_blank" class="text-blue-400 hover:underline">Minecraft EULA</a> and <a href="https://www.minecraft.net/en-us/eula" target="_blank" class="text-blue-400 hover:underline">Commercial Usage Guidelines</a>.</p>
+                        
+                        <div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                            <p class="font-mono text-xs text-gray-300">#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://account.mojang.com/documents/minecraft_eula).</p>
+                            <p class="font-mono text-xs text-gray-300">eula=true</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <a href="https://account.mojang.com/documents/minecraft_eula" target="_blank" class="text-sm text-blue-400 hover:underline flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Read Full EULA
+                        </a>
+                        
+                        <div class="space-x-3">
+                            <button onclick="window.location.reload()" class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
+                                Cancel
+                            </button>
+                            <button 
+                                onclick="axios.post('/instance/<%= req.params.id %>/imagefeatures/eula')
+                                    .then(response => {
+                                        if (response.status === 200) {
+                                            location.reload();
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error accepting EULA:', error);
+                                        alert('Failed to accept EULA. Please try again.');
+                                    });" 
+                                class="px-4 py-2 bg-green-600 text-sm font-medium text-white rounded-md hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                I Agree to EULA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    <% } %>
+    
+    <div class="bg-transparent">
+        <div class="sm:flex sm:items-center px-8">
+            <div class="sm:flex-auto">
+            </div>
+        </div>
+    </div>
+    <%- include('../components/instance') %>
+
+    <div class="rounded-xl bg-red-800/10 px-4 py-6 mt-8 ml-8 mb-8 mr-8 hidden" id="daemonIsDown">
+        <div class="flex">
+            <div class="flex-shrink-0 ml-1.5">
+                <svg class="animate-spin mt-2 h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                    </circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
+            <div class="ml-5">
+                <h3 class="text-sm font-medium text-red-400"><%= req.translations.connectionFailure %></h3>
+                <div class="text-sm text-red-400/50">
+                    <p><%= req.translations.connectionFailureText %></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-col lg:flex-row px-8">
+        <!-- Left side: Console -->
+        <div class="w-full lg:w-2/3 lg:pr-5">
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <span class="status-indicator bg-red-500" id="liveStatusIndicator"></span>
+                    <span class="terminal-title">Server Console</span>
+                </div>
+                <div id="terminal"></div>
+                <input id="input" type="text" autocomplete="off" placeholder="<%= req.translations.SendACommand %>"
+                    class="w-full px-4 py-3 text-white text-sm border-t border-transparent focus:ring-2 focus:focus:ring-transparent focus:border-transparent placeholder:font-medium placeholder:text-neutral-500">
+            </div>
+            
+            <!-- Server Address Panel -->
+            <div class="server-address-card rounded-xl p-5 shadow-lg transition-all duration-300 mt-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-medium text-neutral-400 mb-2 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-2 text-blue-400">
+                                <path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3V18a3 3 0 0 0 3 3h15ZM1.5 10.146V6a3 3 0 0 1 3-3h5.379a2.25 2.25 0 0 1 1.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 0 1 3 3v1.146A4.483 4.483 0 0 0 19.5 9h-15a4.483 4.483 0 0 0-3 1.146Z" />
+                            </svg>
+                            SERVER ADDRESS
+                        </h2>
+                        <div class="flex items-center">
+                            <div class="address-display">
+                                <span id="serverAddress" class="text-white font-mono"><%= instance.Node.address %>:<%= instance.Primary %></span>
+                                <span id="copyStatus" class="copy-indicator ml-2 text-xs text-emerald-400 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3 mr-1">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                    </svg>
+                                    Copied
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="copyServerAddress()" 
+                        class="tooltip copy-btn flex items-center justify-center p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-neutral-300">
+                            <path fill-rule="evenodd" d="M17.663 3.118c.225.015.45.032.673.05C19.876 3.298 21 4.604 21 6.109v9.642a3 3 0 01-3 3V16.5c0-5.922-4.576-10.775-10.384-11.217.324-1.132 1.342-2.027 2.66-2.027h7.387zm-7.73.271A1.5 1.5 0 017.5 2.25h-6a1.5 1.5 0 00-1.5 1.5v15a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5v-6.75a1.5 1.5 0 00-.44-1.06L9.932 3.418z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd" d="M3 3.75A.75.75 0 013.75 3h6a.75.75 0 01.75.75v6.75a.75.75 0 01-.75.75h-6a.75.75 0 01-.75-.75v-6.75zm6.75 3a.75.75 0 00-.75.75v3.75a.75.75 0 001.5 0v-3.75a.75.75 0 00-.75-.75zm2.25 0a.75.75 0 00-.75.75v3.75a.75.75 0 001.5 0v-3.75a.75.75 0 00-.75-.75zm2.25 0a.75.75 0 00-.75.75v3.75a.75.75 0 001.5 0v-3.75a.75.75 0 00-.75-.75z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="tooltip-text">Copy to clipboard</span>
+                    </button>
+                </div>
+                <div class="mt-3 text-xs text-neutral-500 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3 mr-1">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                    </svg>
+                    Share this address with players to connect to your server
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right side: Stats Cards -->
+        <div class="w-full lg:w-1/3 mt-4 lg:mt-0 space-y-4">
+            <!-- Status Card with Power Buttons -->
+            <div class="bg-white/5 rounded-xl px-4 py-5 shadow sm:p-6 h-48 relative overflow-hidden">
+                <canvas id="statusChart" class="absolute inset-0 w-full h-full"></canvas>
+                <div class="relative z-10">
+                    <h2 class="text-sm font-medium text-neutral-400"><%= instance.Name %> <%= req.translations.status %></h2>
+                    <p id="status" class="mt-1 text-lg font-medium tracking-tight text-white">-</p>
+                    
+                    <!-- Power Buttons -->
+                    <div class="power-buttons">
+                        <button id="startButton" type="button"
+                            class="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-center text-sm font-medium text-white shadow-lg hover:bg-emerald-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                class="size-4 inline-flex mr-1 text-emerald-100 mb-0.5">
+                                <path fill-rule="evenodd"
+                                    d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <%= req.translations.start %>
+                        </button>
+                        <button id="restartButton" type="button"
+                            class="flex-1 rounded-xl bg-white/20 px-3 py-2 text-center text-sm font-medium text-white shadow-lg hover:bg-white/25 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                class="size-4 inline-flex mr-1 text-zinc-200 mb-0.5">
+                                <path fill-rule="evenodd"
+                                    d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <%= req.translations.restart %>
+                        </button>
+                        <button id="stopButton" type="button"
+                            class="flex-1 rounded-xl bg-red-600 px-3 py-2 text-center text-sm font-medium text-white shadow-lg hover:bg-red-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                class="size-4 inline-flex mr-1 text-red-100 mb-0.5">
+                                <path fill-rule="evenodd"
+                                    d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <%= req.translations.stop %>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RAM Usage Card -->
+            <div class="bg-white/5 rounded-xl px-4 py-5 shadow sm:p-6">
+                <h2 class="text-sm font-medium text-neutral-400"><%= req.translations.ramUsage %></h2>
+                <div class="progress-container">
+                    <div id="ramProgress" class="progress-bar bg-emerald-500" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="ramPercent">0%</div>
+                <div class="usage-details">
+                    <span id="ramUsed">0 MB</span>
+                    <span id="ramTotal"><%= instance.Memory %> MB</span>
+                </div>
+            </div>
+            
+            <!-- CPU Usage Card -->
+            <div class="bg-white/5 rounded-xl px-4 py-5 shadow sm:p-6">
+                <h2 class="text-sm font-medium text-neutral-400"><%= req.translations.cpuUsage %></h2>
+                <div class="progress-container">
+                    <div id="cpuProgress" class="progress-bar bg-blue-500" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="cpuPercent">0%</div>
+                <div class="usage-details">
+                    <span id="cpuUsed">0%</span>
+                    <span><%= instance.Cpu %>00% CPU</span>
+                </div>
+            </div>
+            
+            <!-- Disk Usage Card -->
+            <div class="bg-white/5 rounded-xl px-4 py-5 shadow sm:p-6">
+                <h2 class="text-sm font-medium text-neutral-400"><%= req.translations.diskUsage %></h2>
+                <div class="progress-container">
+                    <div id="diskProgress" class="progress-bar bg-purple-500" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="diskPercent">0%</div>
+                <div class="usage-details">
+                    <span id="diskUsed">0 MB</span>
+                    <span id="diskTotal"><%= instance.Disk %> GB DISK</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+    const baseTheme = {
+        foreground: '#c5c9d1',
+        background: 'rgba(0 0 0 / 0)',
+        selection: '#5DA5D533',
+        black: '#1E1E1D',
+        brightBlack: '#262625',
+        red: '#E54B4B',
+        green: '#9ECE58',
+        yellow: '#FAED70',
+        blue: '#396FE2',
+        magenta: '#BB80B3',
+        cyan: '#2DDAFD',
+        white: '#d0d0d0',
+        brightBlack: 'rgba(255, 255, 255, 0.2)',
+        brightRed: '#FF5370',
+        brightGreen: '#C3E88D',
+        brightYellow: '#FFCB6B',
+        brightBlue: '#82AAFF',
+        brightMagenta: '#C792EA',
+        brightCyan: '#89DDFF',
+        brightWhite: '#ffffff',
+    };
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const instanceId = '<%= req.params.id %>';
+    const maxCommands = 10;
+    let commandHistory = [];
+    let currentCommandIndex = -1;
+    let term;
+    let ws;
+    let isServerOnline = false;
+    let wasServerOnline = false;
+    
+    // Copy server address to clipboard
+    function copyServerAddress() {
+        const address = document.getElementById('serverAddress').textContent;
+        navigator.clipboard.writeText(address).then(() => {
+            const copyStatus = document.getElementById('copyStatus');
+            copyStatus.classList.add('active');
+            setTimeout(() => {
+                copyStatus.classList.remove('active');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy address: ', err);
+            // Fallback for browsers that don't support clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = address;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const copyStatus = document.getElementById('copyStatus');
+                copyStatus.classList.add('active');
+                setTimeout(() => {
+                    copyStatus.classList.remove('active');
+                }, 2000);
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
+            }
+            document.body.removeChild(textArea);
+        });
+    }
+
+    function initWebSocket() {
+        const port = window.location.port ? `:${window.location.port}` : '';
+        ws = new WebSocket(`${protocol}://${window.location.hostname}${port}/console/${instanceId}`);
+        
+        ws.onopen = () => {
+            console.log('WebSocket connected!');
+            document.getElementById('daemonIsDown').classList.add('hidden');
+            updateButtonStates();
+        };
+        
+        ws.onmessage = handleWebSocketMessage;
+        
+        ws.onclose = () => {
+            console.log('WebSocket connection closed, attempting to reconnect...');
+            document.getElementById('liveStatusIndicator').classList.remove('bg-emerald-500');
+            document.getElementById('liveStatusIndicator').classList.add('bg-red-500');
+            
+            setTimeout(initWebSocket, 3000);
+        };
+        
+        ws.onerror = (error) => {
+            console.log('WebSocket encountered an error:', error);
+            document.getElementById('daemonIsDown').classList.remove('hidden');
+            document.getElementById('liveStatusIndicator').classList.remove('bg-emerald-500');
+            document.getElementById('liveStatusIndicator').classList.add('bg-red-500');
+            
+            setTimeout(initWebSocket, 5000);
+        };
+    }
+    
+    function handleWebSocketMessage(msg) {
+        try {
+            const lines = msg.data.split('\n');
+            let isFirstLine = true;
+            let previousLineWasEmpty = false;
+        
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine === '' && previousLineWasEmpty) return;
+                
+                if (!isFirstLine && !previousLineWasEmpty) {
+                    term.write('\r\n');
+                }
+        
+                term.write('\x1b[0m' + trimmedLine);
+        
+                if (trimmedLine.includes("Working on")) {
+                    term.write('\r\n\u001b[1m\u001b[33m[panel] \u001b[0mreconnecting socket, hold on...');
+                    term.clear();
+                    ws.close();
+                }
+                
+                if (trimmedLine.includes("skyportd instance appears to be down")) {
+                    ws.close();
+                    document.getElementById('daemonIsDown').classList.remove('hidden');
+                    isServerOnline = false;
+                    updateButtonStates();
+                } else {
+                    document.getElementById('daemonIsDown').classList.add('hidden');
+                    
+                    // Detect server status changes
+                    if (trimmedLine.includes("Done") || trimmedLine.match(/For help, type "help"/)) {
+                        isServerOnline = true;
+                        wasServerOnline = true;
+                        updateButtonStates();
+                    } else if (trimmedLine.includes("Stopping server") || trimmedLine.includes("Closing Server")) {
+                        isServerOnline = false;
+                        wasServerOnline = false;
+                        updateButtonStates();
+                    }
+                }
+        
+                isFirstLine = false;
+                previousLineWasEmpty = (trimmedLine === '');
+            });
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    }
+    
+    function setupTerminal() {
+        term = new Terminal({
+            disableStdin: true,
+            allowProposedApi: true,
+            lineHeight: 1.35,
+            rows: 19,
+            cols: 100,
+            fontFamily: 'Menlo, monospace',
+            theme: baseTheme,
+            allowTransparency: true,
+            fontSize: 12,
+        });
+        
+        try {
+            term.open(document.getElementById('terminal'));
+            // Apply fit addon if needed
+            const fitAddon = new FitAddon();
+            term.loadAddon(fitAddon);
+            fitAddon.fit();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                fitAddon.fit();
+            });
+        } catch (error) {
+            console.error('Error setting up terminal:', error);
+        }
+    }
+    
+    function sendCommand() {
+        const inputElement = document.getElementById('input');
+        const command = inputElement.value.trim();
+        
+        if (command && ws && ws.readyState === WebSocket.OPEN) {
+            try {
+                term.write('\u001b[1m\u001b[33m~ \u001b[0m' + command + '\r\n');
+                ws.send(JSON.stringify({
+                    event: 'cmd',
+                    command: command,
+                    containerId: instanceId
+                }));
+        
+                if (commandHistory.length === maxCommands) {
+                    commandHistory.shift();
+                }
+                commandHistory.push(command);
+                currentCommandIndex = commandHistory.length;
+        
+                inputElement.value = '';
+            } catch (error) {
+                console.error('Error sending command:', error);
+                term.write('\r\n\u001b[1m\u001b[31m[error] \u001b[0mFailed to send command');
+            }
+        } else if (!command) {
+            term.write('\r\n\u001b[1m\u001b[33m[warning] \u001b[0mCommand cannot be empty');
+        } else if (ws.readyState !== WebSocket.OPEN) {
+            term.write('\r\n\u001b[1m\u001b[31m[error] \u001b[0mNot connected to server');
+            document.getElementById('daemonIsDown').classList.remove('hidden');
+        }
+    }
+    
+    function handleKeyUp(event) {
+        if (event.key === 'ArrowUp') {
+            if (currentCommandIndex > 0) {
+                currentCommandIndex--;
+                document.getElementById('input').value = commandHistory[currentCommandIndex];
+            }
+            event.preventDefault();
+        } else if (event.key === 'ArrowDown') {
+            if (currentCommandIndex < commandHistory.length - 1) {
+                currentCommandIndex++;
+                document.getElementById('input').value = commandHistory[currentCommandIndex];
+            } else {
+                currentCommandIndex = commandHistory.length;
+                document.getElementById('input').value = '';
+            }
+            event.preventDefault();
+        }
+    }
+    
+    function updateButtonStates() {
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const restartButton = document.getElementById('restartButton');
+        const statusIndicator = document.getElementById('liveStatusIndicator');
+        
+        if (isServerOnline) {
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            restartButton.disabled = false;
+            statusIndicator.classList.remove('bg-red-500');
+            statusIndicator.classList.add('bg-emerald-500');
+        } else {
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            restartButton.disabled = true;
+            statusIndicator.classList.remove('bg-emerald-500');
+            statusIndicator.classList.add('bg-red-500');
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            setupTerminal();
+            initWebSocket();
+    
+            const inputElement = document.getElementById('input');
+            inputElement.addEventListener('keypress', function (event) {
+                if (event.key === 'Enter') {
+                    sendCommand();
+                }
+            });
+    
+            inputElement.addEventListener('keydown', handleKeyUp);
+    
+            ['start', 'stop', 'restart'].forEach(action => {
+                const button = document.getElementById(`${action}Button`);
+                if (button) {
+                    button.addEventListener('click', function () {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            try {
+                                ws.send(JSON.stringify({
+                                    event: `power:${action}`,
+                                    containerId: instanceId
+                                }));
+                                term.write(`\r\n\u001b[1m\u001b[33m[panel] \u001b[0mSent ${action} command to server`);
+                                
+                                // Update button states immediately for better UX
+                                if (action === 'start') {
+                                    isServerOnline = true;
+                                    wasServerOnline = true;
+                                } else if (action === 'stop') {
+                                    isServerOnline = false;
+                                    wasServerOnline = false;
+                                } else if (action === 'restart') {
+                                    isServerOnline = false;
+                                }
+                                updateButtonStates();
+                            } catch (error) {
+                                console.error(`Error sending ${action} command:`, error);
+                                term.write(`\r\n\u001b[1m\u001b[31m[error] \u001b0mFailed to send ${action} command`);
+                            }
+                        } else {
+                            term.write('\r\n\u001b[1m\u001b[31m[error] \u001b[0mNot connected to server');
+                            document.getElementById('daemonIsDown').classList.remove('hidden');
+                        }
+                    });
+                }
+            });
+    
+            initStatsWebSocket();
+            updateButtonStates();
+            
+        } catch (error) {
+            console.error('Initialization error:', error);
+        }
+    });
+
+    function isValidJson(str) {
+        try {
+            JSON.parse(str);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    function initStatsWebSocket() {
+        const port = window.location.port ? `:${window.location.port}` : '';
+        const statsWs = new WebSocket(`${protocol}://${window.location.hostname}${port}/stats/${instanceId}`);
+        
+        statsWs.onmessage = event => {
+            try {
+                if (isValidJson(event.data)) {
+                    const stats = JSON.parse(event.data);
+                    if (stats.error) {
+                        console.error('Error fetching stats:', stats.error);
+                        return;
+                    }
+        
+                    updateRamUsage(stats);
+                    updateCpuUsage(stats);
+                    updateDiskUsage(stats);
+                    updateStatus(stats);
+                }
+            } catch (error) {
+                console.error('Error processing stats:', error);
+            }
+        };
+
+        statsWs.onclose = () => {
+            console.log('WebSocket Stats connection closed, attempting to reconnect...');
+            setTimeout(initStatsWebSocket, 3000);
+        };
+        
+        statsWs.onerror = (error) => {
+            console.log('Stats WebSocket encountered error:', error);
+            setTimeout(initStatsWebSocket, 5000);
+        };
+    }
+    
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    
+    function createBackgroundChart(canvasId, type = 'line') {
+        try {
+            return new Chart(document.getElementById(canvasId).getContext('2d'), {
+                type: type,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    },
+                    animation: false
+                }
+            });
+        } catch (error) {
+            console.error('Error creating chart:', error);
+            return null;
+        }
+    }
+    
+    const statusChart = createBackgroundChart('statusChart');
+    
+    function updateRamUsage(stats) {
+        try {
+            const ramStatsUsage = stats.memory_stats.usage || 0;
+            const ramStatsLimit = stats.memory_stats.limit || 0;
+
+            const ramUsageRaw = ramStatsUsage / 1024 / 1024 || 0;
+            const ramLimitRaw = ramStatsLimit / 1024 / 1024 || <%= instance.Memory %>;
+            const ramUsagePercent = (ramLimitRaw > 0) ? Math.min(100, ((ramUsageRaw / ramLimitRaw) * 100)) : 0;
+            
+            // Update progress bar
+            const ramProgress = document.getElementById('ramProgress');
+            if (ramProgress) {
+                ramProgress.style.width = `${ramUsagePercent}%`;
+                document.getElementById('ramPercent').textContent = `${ramUsagePercent.toFixed(2)}%`;
+                
+                // Update usage details
+                document.getElementById('ramUsed').textContent = formatBytes(ramStatsUsage);
+                document.getElementById('ramTotal').textContent = formatBytes(ramStatsLimit);
+                
+                // Change color based on usage level
+                if (ramUsagePercent > 90) {
+                    ramProgress.classList.remove('bg-emerald-500', 'bg-yellow-500');
+                    ramProgress.classList.add('bg-red-500');
+                } else if (ramUsagePercent > 70) {
+                    ramProgress.classList.remove('bg-emerald-500', 'bg-red-500');
+                    ramProgress.classList.add('bg-yellow-500');
+                } else {
+                    ramProgress.classList.remove('bg-red-500', 'bg-yellow-500');
+                    ramProgress.classList.add('bg-emerald-500');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating RAM usage:', error);
+        }
+    }
+    
+    function updateCpuUsage(stats) {
+        try {
+            const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+            const systemCpuDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+            let cpuUsagePercent = ((cpuDelta / systemCpuDelta) * 100);
+        
+            if (isNaN(cpuUsagePercent)) {
+                cpuUsagePercent = 0;
+            } else {
+                cpuUsagePercent = Math.min(100, cpuUsagePercent);
+            }
+        
+            // Update progress bar
+            const cpuProgress = document.getElementById('cpuProgress');
+            if (cpuProgress) {
+                cpuProgress.style.width = `${cpuUsagePercent}%`;
+                document.getElementById('cpuPercent').textContent = `${cpuUsagePercent.toFixed(2)}%`;
+                document.getElementById('cpuUsed').textContent = `${cpuUsagePercent.toFixed(2)}%`;
+                
+                // Change color based on usage level
+                if (cpuUsagePercent > 90) {
+                    cpuProgress.classList.remove('bg-blue-500', 'bg-yellow-500');
+                    cpuProgress.classList.add('bg-red-500');
+                } else if (cpuUsagePercent > 70) {
+                    cpuProgress.classList.remove('bg-blue-500', 'bg-red-500');
+                    cpuProgress.classList.add('bg-yellow-500');
+                } else {
+                    cpuProgress.classList.remove('bg-red-500', 'bg-yellow-500');
+                    cpuProgress.classList.add('bg-blue-500');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating CPU usage:', error);
+        }
+    }
+    
+    function updateDiskUsage(stats) {
+        try {
+            const diskUsageRaw = parseFloat(stats.volumeSize) || 0;
+            const diskLimitRaw = <%= instance.Disk %> * 1024; // Assuming <%= instance.Disk %>GB limit
+            const diskUsagePercent = Math.min(100, (diskUsageRaw / diskLimitRaw * 100));
+            
+            // Update progress bar
+            const diskProgress = document.getElementById('diskProgress');
+            if (diskProgress) {
+                diskProgress.style.width = `${diskUsagePercent}%`;
+                document.getElementById('diskPercent').textContent = `${diskUsagePercent.toFixed(2)}%`;
+                
+                // Update usage details
+                document.getElementById('diskUsed').textContent = formatBytes(diskUsageRaw * 1024 * 1024);
+                document.getElementById('diskTotal').textContent = formatBytes(diskLimitRaw * 1024 * 1024);
+                
+                // Change color based on usage level
+                if (diskUsagePercent > 90) {
+                    diskProgress.classList.remove('bg-purple-500', 'bg-yellow-500');
+                    diskProgress.classList.add('bg-red-500');
+                } else if (diskUsagePercent > 70) {
+                    diskProgress.classList.remove('bg-purple-500', 'bg-red-500');
+                    diskProgress.classList.add('bg-yellow-500');
+                } else {
+                    diskProgress.classList.remove('bg-red-500', 'bg-yellow-500');
+                    diskProgress.classList.add('bg-purple-500');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating disk usage:', error);
+        }
+    }
+    
+    function updateStatus(stats) {
+        try {
+            const statusElement = document.getElementById('status');
+            if (statusElement) {
+                const ramUsageRaw = stats.memory_stats.usage / 1024 / 1024 || 0;
+                
+                if (ramUsageRaw > 1) {
+                    statusElement.textContent = 'Online';
+                    statusElement.className = 'mt-1 text-lg font-medium tracking-tight text-emerald-500';
+                    updateStatusChart('rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0.2)');
+                    isServerOnline = true;
+                    wasServerOnline = true;
+                } else {
+                    statusElement.textContent = 'Offline';
+                    statusElement.className = 'mt-1 text-lg font-medium tracking-tight text-red-500';
+                    updateStatusChart('rgba(239, 68, 68, 0.1)', 'rgba(239, 68, 68, 0.2)');
+                    isServerOnline = false;
+                    wasServerOnline = false;
+                }
+                updateButtonStates();
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+        }
+    }
+    
+    function updateStatusChart(backgroundColor, borderColor) {
+        try {
+            if (statusChart) {
+                statusChart.data.datasets[0].backgroundColor = backgroundColor;
+                statusChart.data.datasets[0].borderColor = borderColor;
+                statusChart.data.labels = [''];
+                statusChart.data.datasets[0].data = [1];
+                statusChart.update();
+            }
+        } catch (error) {
+            console.error('Error updating status chart:', error);
+        }
+    }
+</script>
+<%- include('../components/footer') %>

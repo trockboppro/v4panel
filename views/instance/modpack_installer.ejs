@@ -1,0 +1,872 @@
+<%- include('../components/template') %>
+<style>
+  /* Modern, clean styling for the modpack manager */
+  :root {
+    --primary-color: #8b5cf6;
+    --primary-hover: #7c3aed;
+    --secondary-color: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --border-color: #334155;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --modrinth-color: #1bd96a;
+    --curseforge-color: #f16436;
+  }
+
+  .modpack-manager-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  .modpack-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .modpack-header {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  .modpack-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .search-filter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  @media (min-width: 640px) {
+    .search-filter-container {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  }
+
+  .filter-dropdown {
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 150px;
+  }
+
+  .modpack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .modpack-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .modpack-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
+  }
+
+  .modpack-banner {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    background-color: var(--bg-primary);
+  }
+
+  .modpack-platform {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .modrinth-badge {
+    background-color: var(--modrinth-color);
+    color: #000;
+  }
+
+  .curseforge-badge {
+    background-color: var(--curseforge-color);
+    color: #fff;
+  }
+
+  .modpack-card-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modpack-card-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .modpack-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    object-fit: cover;
+    margin-right: 1rem;
+    flex-shrink: 0;
+    background-color: var(--bg-primary);
+  }
+
+  .modpack-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+    word-break: break-word;
+  }
+
+  .modpack-author {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  .modpack-meta {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .modpack-version {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .modpack-game-version {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .modpack-downloads {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .modpack-date {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+
+  .modpack-description {
+    margin-top: 1rem;
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .modpack-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .modpack-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: 0.25rem;
+  }
+
+  .modpack-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    border: none;
+    flex: 1;
+  }
+
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .btn-secondary {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    grid-column: 1 / -1;
+  }
+
+  .loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+    margin-bottom: 1.5rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .load-more-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .load-more-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+  }
+
+  .load-more-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal-content {
+    background-color: var(--bg-primary);
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .modal-overlay.active .modal-content {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .version-selector {
+    margin-bottom: 1.5rem;
+  }
+
+  .version-selector label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .progress-container {
+    margin-bottom: 1.5rem;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background-color: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    width: 0;
+    transition: width 0.3s ease;
+  }
+
+  .progress-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background-color: var(--success-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .toast.error {
+    background-color: var(--error-color);
+  }
+
+  .toast.warning {
+    background-color: var(--warning-color);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--border-color);
+  }
+
+  @media (max-width: 640px) {
+    .modpack-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .modpack-actions {
+      flex-direction: column;
+    }
+  
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<main id="content">
+  <%- include('../components/instance', {addons: {plugins: []}}) %>
+  
+  <div class="modpack-manager-container">
+    <div class="modpack-header">
+      <h1 class="modpack-title">Modpack Installer</h1>
+      <div class="search-filter-container">
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search modpacks..." 
+          class="search-input"
+          autocomplete="off"
+          value="<%= typeof req.query.q !== 'undefined' ? req.query.q : '' %>"
+        />
+        <select class="filter-dropdown" id="platformFilter">
+          <option value="all" <%= req.query.platform === 'all' || typeof req.query.platform === 'undefined' ? 'selected' : '' %>>All Platforms</option>
+          <option value="modrinth" <%= req.query.platform === 'modrinth' ? 'selected' : '' %>>Modrinth</option>
+          <option value="curseforge" <%= req.query.platform === 'curseforge' ? 'selected' : '' %>>CurseForge</option>
+        </select>
+        <select class="filter-dropdown" id="gameVersionFilter">
+          <option value="all" <%= req.query.gameVersion === 'all' || typeof req.query.gameVersion === 'undefined' ? 'selected' : '' %>>All Versions</option>
+          <option value="1.20" <%= req.query.gameVersion === '1.20' ? 'selected' : '' %>>1.20.x</option>
+          <option value="1.19" <%= req.query.gameVersion === '1.19' ? 'selected' : '' %>>1.19.x</option>
+          <option value="1.18" <%= req.query.gameVersion === '1.18' ? 'selected' : '' %>>1.18.x</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="modpack-grid" id="modpackContainer">
+      <% if (modpacks && modpacks.length > 0) { %>
+        <% modpacks.forEach(modpack => { %>
+          <div class="modpack-card" data-id="<%= modpack.id %>" data-platform="<%= modpack.platform %>">
+            <img 
+              src="<%= modpack.banner_url || 'https://via.placeholder.com/400x120/1e293b/94a3b8?text=Modpack+Banner' %>" 
+              alt="<%= modpack.name %> banner" 
+              class="modpack-banner"
+              onerror="this.onerror=null;this.src='https://via.placeholder.com/400x120/1e293b/94a3b8?text=Modpack+Banner'"
+            />
+            <span class="modpack-platform <%= modpack.platform === 'modrinth' ? 'modrinth-badge' : 'curseforge-badge' %>">
+              <%= modpack.platform === 'modrinth' ? 'Modrinth' : 'CurseForge' %>
+            </span>
+            
+            <div class="modpack-card-content">
+              <div class="modpack-card-header">
+                <img 
+                  src="<%= modpack.icon_url || 'https://via.placeholder.com/48/1e293b/94a3b8?text=MP' %>" 
+                  alt="<%= modpack.name %> icon" 
+                  class="modpack-icon"
+                  onerror="this.onerror=null;this.src='https://via.placeholder.com/48/1e293b/94a3b8?text=MP'"
+                />
+                <div>
+                  <h3 class="modpack-name"><%= modpack.name %></h3>
+                  <p class="modpack-author">by <%= modpack.author || 'Unknown' %></p>
+                </div>
+              </div>
+              
+              <div class="modpack-meta">
+                <span class="modpack-downloads">
+                  ↓ <%= modpack.downloads ? new Intl.NumberFormat().format(modpack.downloads) : '0' %>
+                </span>
+                <span class="modpack-date">
+                  Updated: <%= modpack.date_updated || 'Unknown' %>
+                </span>
+              </div>
+              
+              <p class="modpack-description">
+                <%= modpack.description ? modpack.description.slice(0, 120) + (modpack.description.length > 120 ? '...' : '') : 'No description available.' %>
+              </p>
+              
+              <% if (modpack.tags && modpack.tags.length > 0) { %>
+                <div class="modpack-tags">
+                  <% modpack.tags.slice(0, 3).forEach(tag => { %>
+                    <span class="modpack-tag"><%= tag %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+              
+              <div class="modpack-actions">
+                <button 
+                  onclick="installModpack(event, '<%= modpack.id %>', '<%= modpack.name.replace(/'/g, "\\'") %>', '<%= modpack.platform %>')" 
+                  class="btn btn-primary"
+                >
+                  Install
+                </button>
+                <a 
+                  href="<%= modpack.platform === 'modrinth' ? 'https://modrinth.com/modpack/' + modpack.id : 'https://www.curseforge.com/minecraft/modpacks/' + modpack.id %>" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="btn btn-secondary"
+                >
+                  Details
+                </a>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h3>No modpacks found</h3>
+          <p>Try adjusting your search filters</p>
+        </div>
+      <% } %>
+    </div>
+    
+    <% if (hasMore) { %>
+      <div class="pagination">
+        <button id="loadMore" class="load-more-btn" onclick="loadMoreModpacks()">
+          Load More Modpacks
+        </button>
+      </div>
+    <% } %>
+  </div>
+  
+  <!-- Installation Modal -->
+  <div class="modal-overlay" id="installModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Installing Modpack</h3>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="version-selector">
+          <label for="modpackVersion">Select Version:</label>
+          <select id="modpackVersion" class="filter-dropdown"></select>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="installProgress"></div>
+          </div>
+          <div class="progress-text" id="installStatus">Preparing installation...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <span id="toastMessage"></span>
+  </div>
+</main>
+
+<script>
+  // DOM Elements
+  const searchInput = document.getElementById('searchInput');
+  const platformFilter = document.getElementById('platformFilter');
+  const gameVersionFilter = document.getElementById('gameVersionFilter');
+  const modpackContainer = document.getElementById('modpackContainer');
+  const loadMoreBtn = document.getElementById('loadMore');
+  const installModal = document.getElementById('installModal');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const modpackVersionSelect = document.getElementById('modpackVersion');
+  const installProgress = document.getElementById('installProgress');
+  const installStatus = document.getElementById('installStatus');
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toastMessage');
+
+  // Event Listeners
+  searchInput.addEventListener('input', debounce(handleSearch, 300));
+  platformFilter.addEventListener('change', handleFilterChange);
+  gameVersionFilter.addEventListener('change', handleFilterChange);
+  modalCloseBtn.addEventListener('change', closeModal);
+  installModal.addEventListener('click', (e) => {
+    if (e.target === installModal) closeModal();
+  });
+
+  // Handle search input
+  function handleSearch() {
+    updateUrlParams();
+  }
+
+  // Handle filter changes
+  function handleFilterChange() {
+    updateUrlParams();
+  }
+
+  // Load more modpacks
+  function loadMoreModpacks() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', parseInt(url.searchParams.get('page') || '1') + 1);
+    window.location.href = url.toString();
+  }
+
+  // Update URL parameters based on filters
+  function updateUrlParams() {
+    const url = new URL(window.location.href);
+    
+    // Reset page when filters change
+    url.searchParams.set('page', '1');
+    
+    // Update search query
+    if (searchInput.value.trim()) {
+      url.searchParams.set('q', searchInput.value.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    
+    // Update platform filter
+    if (platformFilter.value !== 'all') {
+      url.searchParams.set('platform', platformFilter.value);
+    } else {
+      url.searchParams.delete('platform');
+    }
+    
+    // Update game version filter
+    if (gameVersionFilter.value !== 'all') {
+      url.searchParams.set('gameVersion', gameVersionFilter.value);
+    } else {
+      url.searchParams.delete('gameVersion');
+    }
+    
+    window.location.href = url.toString();
+  }
+
+  // Install modpack handler
+  async function installModpack(event, modpackId, modpackName, platform) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+      showModal(`Installing ${modpackName}`);
+      
+      // Fetch available versions
+      const versions = await fetchVersions(modpackId, platform);
+      if (versions.length === 0) {
+        throw new Error('No versions available for this modpack');
+      }
+      
+      // Populate version selector
+      modpackVersionSelect.innerHTML = versions.map(version => `
+        <option value="${version.id}">
+          ${version.name} (MC ${version.game_versions.join(', ')})
+        </option>
+      `).join('');
+      
+      // Wait for version selection
+      const selectedVersionId = await new Promise(resolve => {
+        modpackVersionSelect.addEventListener('change', function handler() {
+          resolve(modpackVersionSelect.value);
+          modpackVersionSelect.removeEventListener('change', handler);
+        });
+      });
+      
+      const selectedVersion = versions.find(v => v.id === selectedVersionId);
+      if (!selectedVersion) {
+        throw new Error('Invalid version selected');
+      }
+      
+      // Update modal for installation
+      document.getElementById('modalTitle').textContent = `Installing ${modpackName} ${selectedVersion.name}`;
+      
+      // Simulate installation progress
+      updateProgress(10, 'Preparing installation...');
+      await delay(500);
+      
+      updateProgress(30, 'Downloading modpack files...');
+      await delay(1000);
+      
+      updateProgress(60, 'Processing dependencies...');
+      await delay(800);
+      
+      updateProgress(80, 'Installing to server...');
+      
+      // Perform actual installation
+      const success = await performInstallation(modpackId, modpackName, platform, selectedVersionId);
+      
+      if (success) {
+        updateProgress(100, 'Installation complete!');
+        showToast(`${modpackName} installed successfully`, 'success');
+      } else {
+        throw new Error('Installation failed');
+      }
+      
+    } catch (error) {
+      console.error('Installation error:', error);
+      updateProgress(0, 'Installation failed');
+      showToast(`Failed to install: ${error.message}`, 'error');
+    } finally {
+      setTimeout(closeModal, 2000);
+    }
+  }
+
+  // Fetch versions from API
+  async function fetchVersions(modpackId, platform) {
+    try {
+      const instanceId = window.location.pathname.split('/')[2];
+      const response = await fetch(`/instance/${instanceId}/modpacks/versions?platform=${platform}&modpackId=${modpackId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch versions');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      showToast('Failed to load versions', 'error');
+      return [];
+    }
+  }
+
+  // Perform the actual installation
+  async function performInstallation(modpackId, modpackName, platform, versionId) {
+    try {
+      const instanceId = window.location.pathname.split('/')[2];
+      const params = new URLSearchParams();
+      params.set('platform', platform);
+      params.set('modpackId', modpackId);
+      params.set('versionId', versionId);
+      params.set('modpackName', modpackName);
+      
+      const response = await fetch(`/instance/${instanceId}/modpacks/download?${params.toString()}`);
+      
+      if (response.redirected) {
+        return true;
+      }
+      
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Installation error:', error);
+      throw error;
+    }
+  }
+
+  // Helper function to show modal
+  function showModal(title) {
+    document.getElementById('modalTitle').textContent = title;
+    installModal.classList.add('active');
+    installProgress.style.width = '0%';
+    installStatus.textContent = 'Starting...';
+  }
+
+  // Helper function to update progress
+  function updateProgress(percent, message) {
+    installProgress.style.width = `${percent}%`;
+    installStatus.textContent = message;
+  }
+
+  // Helper function to close modal
+  function closeModal() {
+    installModal.classList.remove('active');
+  }
+
+  // Helper function to show toast notification
+  function showToast(message, type = 'success') {
+    toastMessage.textContent = message;
+    toast.className = 'toast ' + type;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  // Helper function for delays
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Helper function to debounce rapid events
+  function debounce(func, wait) {
+    let timeout;
+    return function() {
+      const context = this;
+      const args = arguments;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+  }
+</script>
+
+<%- include('../components/footer') %>

@@ -1,0 +1,195 @@
+<%- include('../components/admin_template') %>
+<main id="content" class="p-4 sm:p-6">
+    <div id="nodeForm" class="mt-6 w-full flex justify-center">
+        <div class="p-3 bg-white/5 backdrop-blur-lg shadow-2xl border border-white/10 rounded-2xl overflow-hidden sm:p-6 lg:p-10 card transition-all duration-300 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] w-full max-w-4xl">
+            <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Name -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1"><%= req.translations.name %>:</label>
+                    <input id="name" value="<%= instance.Name %>" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 placeholder:text-white/30 border border-white/10 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="My instance">
+                </div>
+
+                <!-- User -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1"><%= req.translations.user %>:</label>
+                    <select id="user" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 placeholder:text-white/30 border border-black/10 transition-all duration-200 hover:bg-black/10 focus:scale-[1.02]">
+                        <% users.forEach(function(user) { %>
+                            <option value="<%= instance.User %>"><%= user.username %></option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <!-- Image -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">Image:</label>
+                    <select id="image" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]">
+                        <% images.forEach(function(image) { %>
+                            <option data-configfilepath="<%= image.ConfigFilePath %>" data-configfilecontent="<%= image.ConfigFileContent %>"><%= image.Name %> (<%= image.Image %>)</option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <!-- Memory -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">Memory (MiB):</label>
+                    <input value="<%= instance.Memory %>" type="number" id="memory" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 placeholder:text-white/30 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="2048">
+                </div>
+
+                <!-- CPU -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">CPU Threads:</label>
+                    <input value="<%= instance.Cpu %>" id="cpu" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 placeholder:text-white/30 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="1">
+                </div>
+
+                <!-- Disk -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">Disk (GB):</label>
+                    <input value="<%= instance.Disk %>" type="number" id="disk" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 placeholder:text-white/30 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="2048">
+                </div>
+
+                <!-- Ports -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">Ports:</label>
+                    <input value="<%= instance.Ports %>" id="ports" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 placeholder:text-white/30 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="25565:25565,8080:8080">
+                </div>
+
+                <!-- Primary Port -->
+                <div>
+                    <label class="block text-neutral-300 text-sm font-medium tracking-tight mb-1">Primary Port:</label>
+                    <input value="<%= instance.Primary %>" id="primary" 
+                        class="rounded-xl focus:ring-2 focus:ring-blue-500 text-white text-sm mt-1 w-full px-4 py-2 bg-neutral-700/30 border border-white/10 placeholder:text-white/30 transition-all duration-200 hover:bg-white/10 focus:scale-[1.02]" 
+                        placeholder="25565">
+                </div>
+
+                <!-- Save Button -->
+                <div class="md:col-span-2 flex justify-end mt-4">
+                    <button id="createNodeBtn" type="button" 
+                        class="rounded-xl <%= theme['button-color'] %> px-6 py-2 text-center text-sm font-medium shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none flex items-center gap-2">
+                        <span class="btn-text">Save</span>
+                        <svg class="animate-spin hidden w-4 h-4 text-white" id="loadingSpinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    const createBtn = document.getElementById('createNodeBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const btnText = createBtn.querySelector('.btn-text');
+
+    createBtn.addEventListener('click', function() {
+        btnText.textContent = 'Working on it...';
+        spinner.classList.remove('hidden');
+        createBtn.disabled = true;
+
+        // Keep your original logic intact
+        const name = document.getElementById('name');
+        const memory = document.getElementById('memory');
+        const cpu = document.getElementById('cpu');
+        const disk = document.getElementById('disk');
+        const ports = document.getElementById('ports');
+        const imageDropdown = document.getElementById('image');
+        const primaryPort = document.getElementById('primary');
+        const selectedImage = imageDropdown.options[imageDropdown.selectedIndex];
+        const configFilePath = selectedImage.getAttribute('data-configfilepath');
+        let configFileContent = selectedImage.getAttribute('data-configfilecontent');
+
+        clearValidationErrors();
+
+        let isValid = true;
+
+        if (name.value.includes(' ')) {
+            showError(name, 'Name must not contain spaces.');
+            isValid = false;
+        }
+
+        const portPattern = /^(\d+:\d+)(,\d+:\d+)*$/;
+        if (!ports.value.match(portPattern)) {
+            showError(ports, 'Ports must be in the format "port:port,port:port".');
+            isValid = false;
+        }
+
+        if (!primaryPort.value.match(/^\d+$/)) {
+            showError(primaryPort, 'Primary port must be a valid number.');
+            isValid = false;
+        } else {
+            configFileContent = configFileContent.replace('{{primaryPort}}', primaryPort.value);
+        }
+
+        if (!isValid) {
+            btnText.textContent = 'Save';
+            spinner.classList.add('hidden');
+            createBtn.disabled = false;
+            return;
+        }
+
+        const nodeData = {
+            name: name.value,
+            image: imageDropdown.value,
+            nodeId: '<%= instance.Node.id %>',
+            user: document.getElementById('user').value,
+            memory: memory.value,
+            cpu: cpu.value,
+            disk: disk.value,
+            ports: ports.value,
+            primary: primaryPort.value,
+            configFilePath: configFilePath,
+            configFileContent: configFileContent
+        };
+
+        sendData(nodeData);
+    });
+
+    function clearValidationErrors() {
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+    }
+
+    function showError(element, message) {
+        element.classList.add('input-error');
+        const errorDiv = document.createElement('div');
+        errorDiv.textContent = message;
+        errorDiv.className = 'error-message text-red-400 text-xs mt-1 animate-fadeIn';
+        element.parentNode.appendChild(errorDiv);
+    }
+
+    function serializeParams(params) {
+        return Object.keys(params).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(params[key])).join('&');
+    }
+
+    function sendData(nodeData) {
+        const baseUrl = '/instances/redeploy/<%= instance.Id %>';
+        const queryParams = serializeParams(nodeData);
+        const fullUrl = `${baseUrl}?${queryParams}`;
+
+        fetch(fullUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            .then(response => response.ok ? response.json() : Promise.reject('Failed to create instance'))
+            .then(() => window.location.href = '../../../admin/instances?err=CREATED')
+            .catch(err => {
+                console.error(err);
+                alert('Error! Instance creation failed.');
+            })
+            .finally(() => {
+                btnText.textContent = 'Save';
+                spinner.classList.add('hidden');
+                createBtn.disabled = false;
+            });
+    }
+</script>

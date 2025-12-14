@@ -1,0 +1,1275 @@
+<%- include('../components/template') %>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/fit/fit.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+
+<style>
+  /* World Manager Specific Styles */
+  .world-manager-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    height: calc(100vh - 200px);
+  }
+  
+  .world-list {
+    background: rgba(16, 18, 27, 0.6);
+    border-radius: 12px;
+    padding: 15px;
+    overflow-y: auto;
+  }
+  
+  .world-details {
+    background: rgba(16, 18, 27, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
+  .world-card {
+    background: rgba(20, 22, 36, 0.6);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+  
+  .world-card:hover {
+    background: rgba(30, 32, 46, 0.8);
+  }
+  
+  .world-card.active {
+    border-left: 3px solid #6366f1;
+    background: rgba(30, 32, 46, 0.8);
+  }
+  
+  .world-status {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .world-status.loaded {
+    background: #10b981;
+  }
+  
+  .world-status.unloaded {
+    background: #6b7280;
+  }
+  
+  .world-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  
+  .world-action-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .world-action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .world-detail-section {
+    margin-bottom: 20px;
+    background: rgba(20, 22, 36, 0.6);
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .world-property {
+    display: flex;
+    margin-bottom: 8px;
+  }
+  
+  .world-property-label {
+    width: 150px;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+  
+  .world-property-value {
+    flex: 1;
+  }
+  
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .modal-content {
+    background: #1e1e2d;
+    border-radius: 12px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  /* Form styles */
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #e5e7eb;
+    font-size: 14px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: white;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background: #6366f1;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #4f46e5;
+  }
+  
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+  
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Alert styles */
+  .alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+  }
+  
+  .alert.active {
+    transform: translateX(0);
+  }
+  
+  .alert-success {
+    background: rgba(16, 185, 129, 0.9);
+  }
+  
+  .alert-error {
+    background: rgba(239, 68, 68, 0.9);
+  }
+  
+  .alert-warning {
+    background: rgba(245, 158, 11, 0.9);
+  }
+  
+  .alert-info {
+    background: rgba(59, 130, 246, 0.9);
+  }
+</style>
+
+<div class="container mx-auto px-4 py-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-white">World Manager</h1>
+    <div class="flex gap-3">
+      <button id="refreshWorlds" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white">
+        Refresh Worlds
+      </button>
+      <button id="createWorldBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white">
+        Create World
+      </button>
+    </div>
+  </div>
+
+  <div class="world-manager-container">
+    <!-- World List Sidebar -->
+    <div class="world-list">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-white">Worlds</h2>
+        <div class="relative">
+          <input type="text" id="worldSearch" placeholder="Search worlds..." class="pl-8 pr-4 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm w-full">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 absolute left-2 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+      
+      <div id="worldsLoading" class="text-center py-8">
+        <div class="flex items-center justify-center space-x-2">
+          <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Loading worlds...</span>
+        </div>
+      </div>
+      
+      <div id="worldsContainer"></div>
+    </div>
+    
+    <!-- World Details Panel -->
+    <div class="world-details" id="worldDetailsPanel">
+      <div id="noWorldSelected" class="text-center py-12">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-300">No world selected</h3>
+        <p class="mt-1 text-sm text-gray-500">Select a world from the list to view details</p>
+      </div>
+      
+      <div id="worldDetailsContent" class="hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 id="worldNameTitle" class="text-xl font-bold text-white"></h2>
+          <div class="flex gap-2">
+            <span id="worldStatusBadge" class="px-3 py-1 rounded-full text-xs font-medium"></span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Basic Info Section -->
+          <div class="world-detail-section">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Basic Information
+            </h3>
+            
+            <div class="world-property">
+              <div class="world-property-label">Environment</div>
+              <div id="worldEnvironment" class="world-property-value"></div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Status</div>
+              <div id="worldStatus" class="world-property-value"></div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Players</div>
+              <div id="worldPlayers" class="world-property-value"></div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Created</div>
+              <div id="worldCreated" class="world-property-value"></div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Size</div>
+              <div id="worldSize" class="world-property-value"></div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Seed</div>
+              <div id="worldSeed" class="world-property-value"></div>
+            </div>
+          </div>
+          
+          <!-- World Actions Section -->
+          <div class="world-detail-section">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              World Actions
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <button id="loadWorldBtn" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm">
+                Load World
+              </button>
+              <button id="unloadWorldBtn" class="px-3 py-2 bg-orange-600 hover:bg-orange-700 rounded text-white text-sm">
+                Unload World
+              </button>
+              <button id="teleportToWorldBtn" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">
+                Teleport To
+              </button>
+              <button id="teleportAllBtn" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white text-sm">
+                Teleport All
+              </button>
+              <button id="backupWorldBtn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 rounded text-white text-sm">
+                Create Backup
+              </button>
+              <button id="deleteWorldBtn" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-white text-sm">
+                Delete World
+              </button>
+            </div>
+          </div>
+          
+          <!-- World Settings Section -->
+          <div class="world-detail-section">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              World Settings
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingPvP" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Allow PvP</span>
+                </label>
+              </div>
+              
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingAnimals" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Spawn Animals</span>
+                </label>
+              </div>
+              
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingMonsters" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Spawn Monsters</span>
+                </label>
+              </div>
+              
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingWeather" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Weather Cycle</span>
+                </label>
+              </div>
+              
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingStructures" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Generate Structures</span>
+                </label>
+              </div>
+              
+              <div>
+                <label class="flex items-center">
+                  <input type="checkbox" id="settingAutoHeal" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                  <span class="ml-2 text-sm text-gray-300">Auto-Heal</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">Difficulty</label>
+              <div class="grid grid-cols-4 gap-2">
+                <button id="difficultyPeaceful" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs">
+                  Peaceful
+                </button>
+                <button id="difficultyEasy" class="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-xs">
+                  Easy
+                </button>
+                <button id="difficultyNormal" class="px-2 py-1 bg-blue-700 hover:bg-blue-600 rounded text-white text-xs">
+                  Normal
+                </button>
+                <button id="difficultyHard" class="px-2 py-1 bg-red-700 hover:bg-red-600 rounded text-white text-xs">
+                  Hard
+                </button>
+              </div>
+            </div>
+            
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">Game Mode</label>
+              <select id="gameMode" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm">
+                <option value="SURVIVAL">Survival</option>
+                <option value="CREATIVE">Creative</option>
+                <option value="ADVENTURE">Adventure</option>
+                <option value="SPECTATOR">Spectator</option>
+              </select>
+            </div>
+            
+            <div class="mt-4">
+              <button id="saveSettingsBtn" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-white">
+                Save Settings
+              </button>
+            </div>
+          </div>
+          
+          <!-- World Statistics Section -->
+          <div class="world-detail-section">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              World Statistics
+            </h3>
+            
+            <div class="world-property">
+              <div class="world-property-label">Chunks Loaded</div>
+              <div id="statsChunks" class="world-property-value">Loading...</div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Entities</div>
+              <div id="statsEntities" class="world-property-value">Loading...</div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Tile Entities</div>
+              <div id="statsTileEntities" class="world-property-value">Loading...</div>
+            </div>
+            
+            <div class="world-property">
+              <div class="world-property-label">Memory Usage</div>
+              <div id="statsMemory" class="world-property-value">Loading...</div>
+            </div>
+            
+            <div class="mt-4">
+              <canvas id="worldStatsChart" height="150"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create World Modal -->
+<div id="createWorldModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-medium text-white">Create New World</h3>
+      <button onclick="hideModal('createWorldModal')" class="text-gray-400 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">World Name</label>
+      <input type="text" id="newWorldName" class="form-input" placeholder="my_world">
+      <p id="worldNameError" class="text-xs text-red-400 mt-1 hidden">World name is required</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Environment</label>
+      <select id="newWorldEnv" class="form-input">
+        <option value="NORMAL">Normal (Overworld)</option>
+        <option value="NETHER">Nether</option>
+        <option value="THE_END">The End</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">World Type</label>
+      <select id="newWorldType" class="form-input">
+        <option value="NORMAL">Normal</option>
+        <option value="FLAT">Flat</option>
+        <option value="LARGE_BIOMES">Large Biomes</option>
+        <option value="AMPLIFIED">Amplified</option>
+        <option value="VOID">Void</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Generator (Optional)</label>
+      <input type="text" id="newWorldGenerator" class="form-input" placeholder="Plugin:Generator">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Seed (Optional)</label>
+      <input type="text" id="newWorldSeed" class="form-input" placeholder="Leave blank for random">
+    </div>
+    
+    <div class="form-actions">
+      <button onclick="hideModal('createWorldModal')" class="btn btn-secondary">Cancel</button>
+      <button onclick="createNewWorld()" class="btn btn-primary">Create World</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import World Modal -->
+<div id="importWorldModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-medium text-white">Import World</h3>
+      <button onclick="hideModal('importWorldModal')" class="text-gray-400 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">World Name</label>
+      <input type="text" id="importWorldName" class="form-input" placeholder="imported_world">
+      <p id="importNameError" class="text-xs text-red-400 mt-1 hidden">World name is required</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">World Folder</label>
+      <input type="text" id="importWorldFolder" class="form-input" placeholder="world_folder">
+      <p id="importFolderError" class="text-xs text-red-400 mt-1 hidden">Folder name is required</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Environment</label>
+      <select id="importWorldEnv" class="form-input">
+        <option value="NORMAL">Normal (Overworld)</option>
+        <option value="NETHER">Nether</option>
+        <option value="THE_END">The End</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="flex items-center">
+        <input type="checkbox" id="importOverwrite" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+        <span class="ml-2 text-sm text-gray-300">Overwrite if exists</span>
+      </label>
+    </div>
+    
+    <div class="form-actions">
+      <button onclick="hideModal('importWorldModal')" class="btn btn-secondary">Cancel</button>
+      <button onclick="importExistingWorld()" class="btn btn-primary">Import World</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup World Modal -->
+<div id="backupWorldModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-medium text-white">Create World Backup</h3>
+      <button onclick="hideModal('backupWorldModal')" class="text-gray-400 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Backup Name</label>
+      <input type="text" id="backupName" class="form-input" placeholder="backup_2023">
+      <p id="backupNameError" class="text-xs text-red-400 mt-1 hidden">Backup name is required</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="flex items-center">
+        <input type="checkbox" id="backupCompress" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500" checked>
+        <span class="ml-2 text-sm text-gray-300">Compress backup</span>
+      </label>
+    </div>
+    
+    <div class="form-actions">
+      <button onclick="hideModal('backupWorldModal')" class="btn btn-secondary">Cancel</button>
+      <button onclick="createWorldBackup()" class="btn btn-primary">Create Backup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Teleport All Modal -->
+<div id="teleportAllModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-medium text-white">Teleport All Players</h3>
+      <button onclick="hideModal('teleportAllModal')" class="text-gray-400 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Destination World</label>
+      <select id="teleportWorld" class="form-input">
+        <!-- Worlds will be populated here -->
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">Player Filter</label>
+      <select id="teleportFilter" class="form-input">
+        <option value="all">All Players</option>
+        <option value="current">Current World Only</option>
+        <option value="group">Specific Group</option>
+        <option value="permission">With Permission</option>
+      </select>
+    </div>
+    
+    <div id="teleportExtraFields" class="hidden">
+      <!-- Additional fields will appear here based on filter selection -->
+    </div>
+    
+    <div class="form-actions">
+      <button onclick="hideModal('teleportAllModal')" class="btn btn-secondary">Cancel</button>
+      <button onclick="executeTeleportAll()" class="btn btn-primary">Teleport Players</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete World Modal -->
+<div id="deleteWorldModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-medium text-white">Delete World</h3>
+      <button onclick="hideModal('deleteWorldModal')" class="text-gray-400 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="mb-4">
+      <p class="text-gray-300">Are you sure you want to permanently delete <span id="deleteWorldName" class="font-semibold text-white"></span>?</p>
+      <p class="text-sm text-red-400 mt-2">This action cannot be undone!</p>
+    </div>
+    
+    <div class="form-group">
+      <label class="flex items-center">
+        <input type="checkbox" id="createBackupBeforeDelete" class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500" checked>
+        <span class="ml-2 text-sm text-gray-300">Create backup before deleting</span>
+      </label>
+    </div>
+    
+    <div class="form-actions">
+      <button onclick="hideModal('deleteWorldModal')" class="btn btn-secondary">Cancel</button>
+      <button onclick="confirmWorldDeletion()" class="btn bg-red-600 hover:bg-red-700">Delete World</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alert Container -->
+<div id="alertContainer"></div>
+
+<script>
+// World Manager State
+let worlds = [];
+let selectedWorld = null;
+let worldStatsChart = null;
+let ws;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize WebSocket connection
+  initWebSocket();
+  
+  // Load initial world list
+  loadWorlds();
+  
+  // Set up event listeners
+  setupEventListeners();
+  
+  // Initialize charts
+  initCharts();
+});
+
+function initWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const port = window.location.port ? `:${window.location.port}` : '';
+  ws = new WebSocket(`${protocol}://${window.location.hostname}${port}/console/${instanceId}`);
+  
+  ws.onopen = () => console.log('WebSocket connected!');
+  ws.onmessage = handleWebSocketMessage;
+  ws.onclose = () => {
+    console.log('WebSocket connection closed, attempting to reconnect...');
+    setTimeout(initWebSocket, 3000);
+  };
+  ws.onerror = (error) => {
+    console.log('WebSocket encountered an error:', error);
+    setTimeout(initWebSocket, 5000);
+  };
+}
+
+function handleWebSocketMessage(msg) {
+  // Check if this is a world list response
+  if (msg.data.includes("=== Worlds ===") {
+    parseWorldList(msg.data);
+  }
+  
+  // Check if this is a command response
+  if (msg.data.includes("World created") || msg.data.includes("World imported")) {
+    loadWorlds();
+    showAlert('success', 'Success', msg.data);
+  }
+}
+
+function setupEventListeners() {
+  // World list refresh
+  document.getElementById('refreshWorlds').addEventListener('click', loadWorlds);
+  
+  // Create world button
+  document.getElementById('createWorldBtn').addEventListener('click', () => {
+    showModal('createWorldModal');
+  });
+  
+  // World search
+  document.getElementById('worldSearch').addEventListener('input', filterWorlds);
+  
+  // World action buttons
+  document.getElementById('loadWorldBtn').addEventListener('click', loadSelectedWorld);
+  document.getElementById('unloadWorldBtn').addEventListener('click', unloadSelectedWorld);
+  document.getElementById('teleportToWorldBtn').addEventListener('click', teleportToSelectedWorld);
+  document.getElementById('teleportAllBtn').addEventListener('click', showTeleportAllModal);
+  document.getElementById('backupWorldBtn').addEventListener('click', showBackupModal);
+  document.getElementById('deleteWorldBtn').addEventListener('click', showDeleteModal);
+  
+  // Settings buttons
+  document.getElementById('saveSettingsBtn').addEventListener('click', saveWorldSettings);
+  
+  // Difficulty buttons
+  document.getElementById('difficultyPeaceful').addEventListener('click', () => setDifficulty('PEACEFUL'));
+  document.getElementById('difficultyEasy').addEventListener('click', () => setDifficulty('EASY'));
+  document.getElementById('difficultyNormal').addEventListener('click', () => setDifficulty('NORMAL'));
+  document.getElementById('difficultyHard').addEventListener('click', () => setDifficulty('HARD'));
+}
+
+function initCharts() {
+  const ctx = document.getElementById('worldStatsChart').getContext('2d');
+  worldStatsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array(12).fill('').map((_, i) => `${i*5}s`),
+      datasets: [{
+        label: 'Memory Usage (MB)',
+        data: Array(12).fill(0),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)'
+          },
+          ticks: {
+            color: '#9ca3af'
+          }
+        },
+        x: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)'
+          },
+          ticks: {
+            color: '#9ca3af'
+          }
+        }
+      }
+    }
+  });
+}
+
+function loadWorlds() {
+  const loadingElement = document.getElementById('worldsLoading');
+  const worldsContainer = document.getElementById('worldsContainer');
+  
+  loadingElement.classList.remove('hidden');
+  worldsContainer.innerHTML = '';
+  
+  // Simulate loading from server (in a real implementation, this would be a WebSocket message)
+  setTimeout(() => {
+    // This would come from the server in a real implementation
+    const mockWorlds = [
+      {
+        name: 'world',
+        environment: 'NORMAL',
+        loaded: true,
+        players: 3,
+        created: '2023-05-15',
+        size: '1.2 GB',
+        seed: '123456789'
+      },
+      {
+        name: 'world_nether',
+        environment: 'NETHER',
+        loaded: true,
+        players: 0,
+        created: '2023-05-15',
+        size: '450 MB',
+        seed: '123456789'
+      },
+      {
+        name: 'world_the_end',
+        environment: 'THE_END',
+        loaded: false,
+        players: 0,
+        created: '2023-05-15',
+        size: '320 MB',
+        seed: '123456789'
+      },
+      {
+        name: 'creative',
+        environment: 'NORMAL',
+        loaded: true,
+        players: 2,
+        created: '2023-06-20',
+        size: '850 MB',
+        seed: '987654321'
+      }
+    ];
+    
+    parseWorldList(mockWorlds);
+    loadingElement.classList.add('hidden');
+  }, 1000);
+}
+
+function parseWorldList(worldsData) {
+  worlds = Array.isArray(worldsData) ? worldsData : [];
+  
+  const worldsContainer = document.getElementById('worldsContainer');
+  worldsContainer.innerHTML = '';
+  
+  if (worlds.length === 0) {
+    worldsContainer.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        No worlds found on this server
+      </div>
+    `;
+    return;
+  }
+  
+  worlds.forEach(world => {
+    const worldCard = document.createElement('div');
+    worldCard.className = `world-card ${selectedWorld === world.name ? 'active' : ''}`;
+    worldCard.innerHTML = `
+      <div class="flex items-center">
+        <span class="world-status ${world.loaded ? 'loaded' : 'unloaded'}"></span>
+        <div>
+          <div class="font-medium text-white">${world.name}</div>
+          <div class="text-xs text-gray-400">${formatEnvironment(world.environment)} • ${world.players} player${world.players !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <div class="world-actions">
+        <button class="world-action-btn" onclick="event.stopPropagation(); teleportToWorld('${world.name}')">
+          Teleport
+        </button>
+        <button class="world-action-btn" onclick="event.stopPropagation(); ${world.loaded ? 'unloadWorld' : 'loadWorld'}('${world.name}')">
+          ${world.loaded ? 'Unload' : 'Load'}
+        </button>
+      </div>
+    `;
+    
+    worldCard.addEventListener('click', () => selectWorld(world));
+    worldsContainer.appendChild(worldCard);
+  });
+}
+
+function filterWorlds() {
+  const searchTerm = document.getElementById('worldSearch').value.toLowerCase();
+  const worldCards = document.querySelectorAll('.world-card');
+  
+  worldCards.forEach(card => {
+    const worldName = card.querySelector('.font-medium').textContent.toLowerCase();
+    if (worldName.includes(searchTerm)) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function selectWorld(world) {
+  selectedWorld = world.name;
+  
+  // Update active state in list
+  document.querySelectorAll('.world-card').forEach(card => {
+    card.classList.remove('active');
+    if (card.querySelector('.font-medium').textContent === world.name) {
+      card.classList.add('active');
+    }
+  });
+  
+  // Show world details
+  document.getElementById('noWorldSelected').classList.add('hidden');
+  document.getElementById('worldDetailsContent').classList.remove('hidden');
+  
+  // Update world details
+  document.getElementById('worldNameTitle').textContent = world.name;
+  document.getElementById('worldStatusBadge').textContent = world.loaded ? 'Loaded' : 'Unloaded';
+  document.getElementById('worldStatusBadge').className = `px-3 py-1 rounded-full text-xs font-medium ${
+    world.loaded ? 'bg-green-600/20 text-green-400' : 'bg-gray-600/20 text-gray-400'
+  }`;
+  
+  document.getElementById('worldEnvironment').textContent = formatEnvironment(world.environment);
+  document.getElementById('worldStatus').textContent = world.loaded ? 'Loaded' : 'Unloaded';
+  document.getElementById('worldPlayers').textContent = `${world.players} player${world.players !== 1 ? 's' : ''}`;
+  document.getElementById('worldCreated').textContent = world.created;
+  document.getElementById('worldSize').textContent = world.size;
+  document.getElementById('worldSeed').textContent = world.seed;
+  
+  // Update action buttons state
+  document.getElementById('loadWorldBtn').classList.toggle('hidden', world.loaded);
+  document.getElementById('unloadWorldBtn').classList.toggle('hidden', !world.loaded);
+  
+  // Load world stats (simulated)
+  loadWorldStats(world.name);
+}
+
+function formatEnvironment(env) {
+  const names = {
+    'NORMAL': 'Overworld',
+    'NETHER': 'Nether',
+    'THE_END': 'The End'
+  };
+  return names[env] || env;
+}
+
+function loadWorldStats(worldName) {
+  // Simulate loading stats
+  document.getElementById('statsChunks').textContent = 'Loading...';
+  document.getElementById('statsEntities').textContent = 'Loading...';
+  document.getElementById('statsTileEntities').textContent = 'Loading...';
+  document.getElementById('statsMemory').textContent = 'Loading...';
+  
+  setTimeout(() => {
+    // Simulated data
+    document.getElementById('statsChunks').textContent = `${Math.floor(Math.random() * 1000)} chunks`;
+    document.getElementById('statsEntities').textContent = `${Math.floor(Math.random() * 500)} entities`;
+    document.getElementById('statsTileEntities').textContent = `${Math.floor(Math.random() * 200)} tile entities`;
+    document.getElementById('statsMemory').textContent = `${(Math.random() * 100).toFixed(2)} MB`;
+    
+    // Update chart with simulated data
+    const newData = Array(12).fill(0).map(() => Math.random() * 100);
+    worldStatsChart.data.datasets[0].data = newData;
+    worldStatsChart.update();
+  }, 800);
+}
+
+function createNewWorld() {
+  const name = document.getElementById('newWorldName').value.trim();
+  const env = document.getElementById('newWorldEnv').value;
+  const type = document.getElementById('newWorldType').value;
+  const generator = document.getElementById('newWorldGenerator').value.trim();
+  const seed = document.getElementById('newWorldSeed').value.trim();
+  
+  if (!name) {
+    document.getElementById('worldNameError').classList.remove('hidden');
+    return;
+  }
+  
+  // Build the command
+  let command = `mv create ${name} ${env} -t ${type}`;
+  if (generator) command += ` -g ${generator}`;
+  if (seed) command += ` -s ${seed}`;
+  
+  // Send command to server
+  executeServerCommand(command);
+  hideModal('createWorldModal');
+}
+
+function importExistingWorld() {
+  const name = document.getElementById('importWorldName').value.trim();
+  const folder = document.getElementById('importWorldFolder').value.trim();
+  const env = document.getElementById('importWorldEnv').value;
+  const overwrite = document.getElementById('importOverwrite').checked;
+  
+  if (!name || !folder) {
+    if (!name) document.getElementById('importNameError').classList.remove('hidden');
+    if (!folder) document.getElementById('importFolderError').classList.remove('hidden');
+    return;
+  }
+  
+  let command = `mv import ${name} ${folder} ${env}`;
+  if (overwrite) command += ' -o';
+  
+  executeServerCommand(command);
+  hideModal('importWorldModal');
+}
+
+function loadSelectedWorld() {
+  if (!selectedWorld) return;
+  executeServerCommand(`mv load ${selectedWorld}`);
+  showAlert('info', 'Loading', `Loading world ${selectedWorld}`);
+}
+
+function unloadSelectedWorld() {
+  if (!selectedWorld) return;
+  executeServerCommand(`mv unload ${selectedWorld}`);
+  showAlert('info', 'Unloading', `Unloading world ${selectedWorld}`);
+}
+
+function teleportToSelectedWorld() {
+  if (!selectedWorld) return;
+  const player = prompt('Enter player name to teleport:');
+  if (player) {
+    executeServerCommand(`mv tp ${player} ${selectedWorld}`);
+    showAlert('success', 'Teleporting', `Teleporting ${player} to ${selectedWorld}`);
+  }
+}
+
+function showTeleportAllModal() {
+  if (!selectedWorld) return;
+  
+  const modal = document.getElementById('teleportAllModal');
+  const worldSelect = document.getElementById('teleportWorld');
+  
+  // Clear existing options
+  worldSelect.innerHTML = '';
+  
+  // Add loaded worlds to select
+  worlds.filter(w => w.loaded).forEach(world => {
+    const option = document.createElement('option');
+    option.value = world.name;
+    option.textContent = world.name;
+    if (world.name === selectedWorld) {
+      option.selected = true;
+    }
+    worldSelect.appendChild(option);
+  });
+  
+  showModal('teleportAllModal');
+}
+
+function executeTeleportAll() {
+  const world = document.getElementById('teleportWorld').value;
+  const filter = document.getElementById('teleportFilter').value;
+  
+  let command = `mv tp @a ${world}`;
+  
+  // Add filters based on selection
+  switch(filter) {
+    case 'current':
+      command = `execute in ${selectedWorld} run tp @a ${world}`;
+      break;
+    case 'group':
+      const group = prompt('Enter group/team name:');
+      if (!group) return;
+      command = `mv tp @a[team=${group}] ${world}`;
+      break;
+    case 'permission':
+      const permission = prompt('Enter permission node:');
+      if (!permission) return;
+      command = `mv tp @a[permission=${permission}] ${world}`;
+      break;
+  }
+  
+  executeServerCommand(command);
+  hideModal('teleportAllModal');
+  showAlert('success', 'Teleporting', `Teleporting players to ${world}`);
+}
+
+function showBackupModal() {
+  if (!selectedWorld) return;
+  
+  const modal = document.getElementById('backupWorldModal');
+  const now = new Date();
+  const backupName = `backup_${selectedWorld}_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
+  
+  document.getElementById('backupName').value = backupName;
+  showModal('backupWorldModal');
+}
+
+function createWorldBackup() {
+  if (!selectedWorld) return;
+  
+  const name = document.getElementById('backupName').value.trim();
+  const compress = document.getElementById('backupCompress').checked;
+  
+  if (!name) {
+    document.getElementById('backupNameError').classList.remove('hidden');
+    return;
+  }
+  
+  let command = `mv backup ${selectedWorld} ${name}`;
+  if (!compress) command += ' -u';
+  
+  executeServerCommand(command);
+  hideModal('backupWorldModal');
+  showAlert('info', 'Backup', `Creating backup of ${selectedWorld}`);
+}
+
+function showDeleteModal() {
+  if (!selectedWorld) return;
+  
+  document.getElementById('deleteWorldName').textContent = selectedWorld;
+  showModal('deleteWorldModal');
+}
+
+function confirmWorldDeletion() {
+  if (!selectedWorld) return;
+  
+  const backup = document.getElementById('createBackupBeforeDelete').checked;
+  let command = `mv delete ${selectedWorld}`;
+  
+  if (backup) {
+    const now = new Date();
+    const backupName = `backup_${selectedWorld}_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
+    command = `mv backup ${selectedWorld} ${backupName} && mv delete ${selectedWorld}`;
+  }
+  
+  executeServerCommand(command);
+  hideModal('deleteWorldModal');
+  showAlert('warning', 'Deleting', `Deleting world ${selectedWorld}`);
+  
+  // Reset selection
+  selectedWorld = null;
+  document.getElementById('noWorldSelected').classList.remove('hidden');
+  document.getElementById('worldDetailsContent').classList.add('hidden');
+}
+
+function setDifficulty(difficulty) {
+  if (!selectedWorld) return;
+  executeServerCommand(`difficulty ${difficulty} ${selectedWorld}`);
+  showAlert('success', 'Difficulty', `Set difficulty to ${difficulty.toLowerCase()}`);
+}
+
+function saveWorldSettings() {
+  if (!selectedWorld) return;
+  
+  // Get all settings
+  const pvp = document.getElementById('settingPvP').checked ? 'on' : 'off';
+  const animals = document.getElementById('settingAnimals').checked ? 'on' : 'off';
+  const monsters = document.getElementById('settingMonsters').checked ? 'on' : 'off';
+  const weather = document.getElementById('settingWeather').checked ? 'on' : 'off';
+  const structures = document.getElementById('settingStructures').checked ? 'on' : 'off';
+  const autoheal = document.getElementById('settingAutoHeal').checked ? 'on' : 'off';
+  const gamemode = document.getElementById('gameMode').value;
+  
+  // Execute commands to update settings
+  executeServerCommand(`mv set pvp ${pvp} ${selectedWorld}`);
+  executeServerCommand(`mv set animals ${animals} ${selectedWorld}`);
+  executeServerCommand(`mv set monsters ${monsters} ${selectedWorld}`);
+  executeServerCommand(`mv set weather ${weather} ${selectedWorld}`);
+  executeServerCommand(`mv set structures ${structures} ${selectedWorld}`);
+  executeServerCommand(`mv set autoheal ${autoheal} ${selectedWorld}`);
+  executeServerCommand(`mv set gamemode ${gamemode} ${selectedWorld}`);
+  
+  showAlert('success', 'Settings', `Updated settings for ${selectedWorld}`);
+}
+
+function executeServerCommand(command) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    showAlert('error', 'Error', 'Not connected to server');
+    return;
+  }
+  
+  try {
+    ws.send(JSON.stringify({
+      event: 'cmd',
+      command: command,
+      containerId: '<%= req.params.id %>'
+    }));
+  } catch (error) {
+    console.error('Error sending command:', error);
+    showAlert('error', 'Error', 'Failed to send command');
+  }
+}
+
+function showModal(modalId) {
+  document.getElementById(modalId).classList.add('active');
+}
+
+function hideModal(modalId) {
+  document.getElementById(modalId).classList.remove('active');
+}
+
+function showAlert(type, title, message) {
+  const alertContainer = document.getElementById('alertContainer');
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type} active`;
+  
+  const icon = {
+    'success': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>`,
+    'error': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>`,
+    'warning': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>`,
+    'info': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>`
+  }[type];
+  
+  alert.innerHTML = `
+    <div class="flex items-center">
+      ${icon}
+      <div>
+        <div class="font-medium">${title}</div>
+        <div class="text-sm opacity-80">${message}</div>
+      </div>
+    </div>
+  `;
+  
+  alertContainer.appendChild(alert);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    alert.classList.remove('active');
+    setTimeout(() => {
+      alert.remove();
+    }, 300);
+  }, 5000);
+}
+</script>
+
+<%- include('../components/footer') %>
