@@ -1,4 +1,4 @@
 # v4panel
 # code install
 - b1 
-- b2 ``git clone https://github.com/trockboppro/v4panel & npm i & npm run seed & npm run createUser``
+- b2 ``git clone https://github.com/trockboppro/v4panel & cd v4panel & npm i & npm run seed & npm run createUser``
